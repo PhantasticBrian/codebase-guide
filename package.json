@@ -1,0 +1,33 @@
+{
+  "name": "codebase-guide",
+  "version": "1.0.0",
+  "description": "A CLI tool that combines repomix with Gemini AI to provide codebase analysis and guidance",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "codebase-guide": "./index.js"
+  },
+  "scripts": {
+    "install-global": "npm install -g ."
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "axios": "^1.6.2",
+    "clipboardy": "^4.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1"
+  },
+  "keywords": [
+    "repomix",
+    "gemini",
+    "ai",
+    "codebase",
+    "analysis",
+    "cli"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
