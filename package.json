@@ -5,6 +5,7 @@
   "type": "module",
   "main": "index.js",
   "bin": {
+    "cg": "./index.js",
     "codebase-guide": "./index.js"
   },
   "scripts": {
