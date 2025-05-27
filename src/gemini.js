@@ -4,6 +4,7 @@ import chalk from "chalk";
 import { CONFIG } from "./config.js";
 import { GeminiAPIError, ConfigError } from "./errors.js";
 import { shouldBeQuiet, logError } from "./utils.js";
+import { generateCacheKey, getCacheEntry, setCacheEntry } from "./cache.js";
 
 export function getAnalysisPrompt(codebase, goal) {
   return `You are an AI assistant tasked with analyzing a codebase and providing guidance for achieving a specific goal. Your role is to prepare a detailed guide that will help a developer understand the current state of the codebase and plan their approach to implementing the desired changes.
@@ -49,10 +50,10 @@ Ensure that your guidance is detailed, actionable, and directly relevant to the 
 
 export async function callGeminiAPI(codebase, goal, options = {}) {
   const quiet = shouldBeQuiet(options);
-  const spinner = quiet ? null : ora("Analyzing codebase with Gemini AI...").start();
-
+  
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    const spinner = quiet ? null : ora("Gemini API key not found").start();
     if (spinner) spinner.fail("Gemini API key not found");
     const message = "GEMINI_API_KEY environment variable not set.";
     logError(message, quiet);
@@ -64,6 +65,17 @@ export async function callGeminiAPI(codebase, goal, options = {}) {
   }
 
   const modelId = options.model || CONFIG.MODEL_ID;
+  
+  const cacheKey = generateCacheKey('gemini', codebase, goal, modelId);
+  const cachedResult = getCacheEntry(cacheKey);
+  
+  if (cachedResult) {
+    const spinner = quiet ? null : ora("Loading cached analysis...").start();
+    if (spinner) spinner.succeed("Analysis loaded from cache");
+    return cachedResult;
+  }
+
+  const spinner = quiet ? null : ora("Analyzing codebase with Gemini AI...").start();
   const prompt = getAnalysisPrompt(codebase, goal);
 
   const requestBody = {
@@ -92,7 +104,9 @@ export async function callGeminiAPI(codebase, goal, options = {}) {
     if (spinner) spinner.succeed("Analysis completed");
 
     if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      return response.data.candidates[0].content.parts[0].text;
+      const result = response.data.candidates[0].content.parts[0].text;
+      setCacheEntry(cacheKey, result);
+      return result;
     } else {
       throw new Error("Unexpected response format from Gemini API");
     }

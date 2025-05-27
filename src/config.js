@@ -3,6 +3,7 @@ export const CONFIG = {
   MODEL_ID: "gemini-2.5-pro-preview-05-06",
   GENERATE_CONTENT_API: "generateContent",
   API_TIMEOUT: 120000, // 2 minutes
+  CACHE_TTL: 300000, // 5 minutes
   DEFAULT_IGNORE_PATTERNS: [
     // Image files
     "**/*.svg", "**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.bmp",
