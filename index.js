@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
 import { Command } from "commander";
 import { exec } from "child_process";
 import { promisify } from "util";
