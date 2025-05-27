@@ -62,6 +62,11 @@ function readStdin() {
     let data = "";
     process.stdin.setEncoding("utf8");
 
+    // Show prompt if running in a TTY
+    if (process.stdin.isTTY) {
+      process.stdout.write("Enter your goal (press Ctrl+D when finished):\n");
+    }
+
     process.stdin.on("data", (chunk) => {
       data += chunk;
     });
@@ -338,26 +343,15 @@ program
   .action(async (goal, options) => {
     // If no goal provided as argument, try to read from stdin
     if (!goal) {
-      if (process.stdin.isTTY) {
-        // Not piped, show help
-        program.help();
-        return;
-      } else {
-        // Read from stdin
-        goal = await readStdin();
-        if (!goal) {
-          console.error("Error: No goal provided via argument or stdin");
-          process.exit(1);
-        }
+      // Read from stdin regardless of TTY status
+      goal = await readStdin();
+      if (!goal) {
+        console.error("Error: No goal provided via argument or stdin");
+        process.exit(1);
       }
     }
 
     await main(goal, options);
   });
-
-// Show help if no arguments provided and not piped
-if (process.argv.length <= 2 && process.stdin.isTTY) {
-  program.help();
-}
 
 program.parse();
