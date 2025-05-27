@@ -19,16 +19,19 @@ const GENERATE_CONTENT_API = "generateContent";
 // Check if we're in a pipe or TTY
 const isInPipe = !process.stdin.isTTY || !process.stdout.isTTY;
 
-const ANALYSIS_PROMPT = `You are an AI assistant tasked with analyzing a codebase and providing guidance for achieving a specific goal. Your role is to prepare a detailed guide that will help a developer understand the current state of the codebase and plan their approach to implementing the desired changes.
+const getAnalysisPrompt = (
+  codebase,
+  goal
+) => `You are an AI assistant tasked with analyzing a codebase and providing guidance for achieving a specific goal. Your role is to prepare a detailed guide that will help a developer understand the current state of the codebase and plan their approach to implementing the desired changes.
 
 First, you will be presented with the entire codebase and a specific goal. The codebase will be enclosed in <codebase> tags, and the goal will be enclosed in <goal> tags.
 
 <codebase>
-{{CODEBASE}}
+${codebase}
 </codebase>
 
 <goal>
-{{GOAL}}
+${goal}
 </goal>
 
 Analyze the provided codebase thoroughly. Focus on understanding the overall structure, including directories, files, and their relationships. Pay special attention to components that may be relevant to the specified goal.
@@ -47,12 +50,14 @@ Summarize your findings and provide a suggested order of files or components to 
 
 Remember to focus solely on the current state of the codebase. Do not suggest or discuss any new files or modifications at this stage. Your task is to provide a clear understanding of the existing codebase as it relates to the specified goal.
 
-Present your analysis and guidance in a clear, structured format using appropriate headings and bullet points where necessary. Begin your response with:
+Present your analysis and guidance in a clear, structured format using appropriate headings and bullet points where necessary. Respond in the format:
+
+<goal> 
+${goal}
+</goal>
 
 <analysis>
-
-And end your response with:
-
+[ANALYSIS]
 </analysis>
 
 Ensure that your guidance is detailed, actionable, and directly relevant to the provided goal and codebase structure.`;
@@ -195,7 +200,7 @@ async function callGeminiAPI(codebase, goal, options = {}) {
     process.exit(1);
   }
 
-  const prompt = ANALYSIS_PROMPT.replace("{{CODEBASE}}", codebase).replace("{{GOAL}}", goal);
+  const prompt = getAnalysisPrompt(codebase, goal);
 
   const requestBody = {
     contents: [
