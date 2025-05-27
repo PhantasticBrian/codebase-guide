@@ -15,6 +15,9 @@ const program = new Command();
 const MODEL_ID = "gemini-2.5-pro-preview-05-06";
 const GENERATE_CONTENT_API = "generateContent";
 
+// Check if we're in a pipe or TTY
+const isInPipe = !process.stdin.isTTY || !process.stdout.isTTY;
+
 const ANALYSIS_PROMPT = `You are an AI assistant tasked with analyzing a codebase and providing guidance for achieving a specific goal. Your role is to prepare a detailed guide that will help a developer understand the current state of the codebase and plan their approach to implementing the desired changes.
 
 First, you will be presented with the entire codebase and a specific goal. The codebase will be enclosed in <codebase> tags, and the goal will be enclosed in <goal> tags.
@@ -53,8 +56,25 @@ And end your response with:
 
 Ensure that your guidance is detailed, actionable, and directly relevant to the provided goal and codebase structure.`;
 
+// Function to read from stdin
+function readStdin() {
+  return new Promise((resolve) => {
+    let data = "";
+    process.stdin.setEncoding("utf8");
+
+    process.stdin.on("data", (chunk) => {
+      data += chunk;
+    });
+
+    process.stdin.on("end", () => {
+      resolve(data.trim());
+    });
+  });
+}
+
 async function runRepomix(options = {}) {
-  const spinner = ora("Packing codebase with repomix...").start();
+  const quiet = options.quiet || options.pipe || isInPipe;
+  const spinner = quiet ? null : ora("Packing codebase with repomix...").start();
 
   // Default ignore patterns for images and binary files
   const defaultIgnorePatterns = [
@@ -125,32 +145,47 @@ async function runRepomix(options = {}) {
 
   try {
     const { stdout } = await execAsync(command);
-    spinner.succeed("Codebase packed successfully");
+    if (spinner) spinner.succeed("Codebase packed successfully");
     return stdout;
   } catch (error) {
-    spinner.fail("Failed to run repomix");
+    if (spinner) spinner.fail("Failed to run repomix");
 
     if (error.code === "ENOENT") {
-      console.error(chalk.red("\n❌ Error: npm/npx command not found."));
-      console.error(chalk.yellow("Please ensure Node.js and npm are properly installed."));
-      console.error(chalk.cyan("Visit: https://nodejs.org/"));
+      if (!quiet) {
+        console.error(chalk.red("\n❌ Error: npm/npx command not found."));
+        console.error(chalk.yellow("Please ensure Node.js and npm are properly installed."));
+        console.error(chalk.cyan("Visit: https://nodejs.org/"));
+      } else {
+        console.error(
+          "Error: npm/npx command not found. Please ensure Node.js and npm are properly installed."
+        );
+      }
     } else {
-      console.error(chalk.red("\n❌ Error running repomix:"), error.message);
+      if (!quiet) {
+        console.error(chalk.red("\n❌ Error running repomix:"), error.message);
+      } else {
+        console.error("Error running repomix:", error.message);
+      }
     }
 
     process.exit(1);
   }
 }
 
-async function callGeminiAPI(codebase, goal) {
-  const spinner = ora("Analyzing codebase with Gemini AI...").start();
+async function callGeminiAPI(codebase, goal, options = {}) {
+  const quiet = options.quiet || options.pipe || isInPipe;
+  const spinner = quiet ? null : ora("Analyzing codebase with Gemini AI...").start();
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    spinner.fail("Gemini API key not found");
-    console.error(chalk.red("\n❌ Error: GEMINI_API_KEY environment variable not set."));
-    console.error(chalk.yellow("Please set your Gemini API key:"));
-    console.error(chalk.cyan('  export GEMINI_API_KEY="your-api-key-here"'));
+    if (spinner) spinner.fail("Gemini API key not found");
+    if (!quiet) {
+      console.error(chalk.red("\n❌ Error: GEMINI_API_KEY environment variable not set."));
+      console.error(chalk.yellow("Please set your Gemini API key:"));
+      console.error(chalk.cyan('  export GEMINI_API_KEY="your-api-key-here"'));
+    } else {
+      console.error("Error: GEMINI_API_KEY environment variable not set.");
+    }
     process.exit(1);
   }
 
@@ -185,7 +220,7 @@ async function callGeminiAPI(codebase, goal) {
       }
     );
 
-    spinner.succeed("Analysis completed");
+    if (spinner) spinner.succeed("Analysis completed");
 
     if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
       return response.data.candidates[0].content.parts[0].text;
@@ -193,22 +228,40 @@ async function callGeminiAPI(codebase, goal) {
       throw new Error("Unexpected response format from Gemini API");
     }
   } catch (error) {
-    spinner.fail("Failed to analyze with Gemini AI");
+    if (spinner) spinner.fail("Failed to analyze with Gemini AI");
 
     if (error.response) {
-      console.error(chalk.red("\n❌ API Error:"), error.response.status, error.response.statusText);
-      if (error.response.data) {
-        console.error(chalk.red("Response:"), JSON.stringify(error.response.data, null, 2));
+      if (!quiet) {
+        console.error(
+          chalk.red("\n❌ API Error:"),
+          error.response.status,
+          error.response.statusText
+        );
+        if (error.response.data) {
+          console.error(chalk.red("Response:"), JSON.stringify(error.response.data, null, 2));
+        }
+      } else {
+        console.error("API Error:", error.response.status, error.response.statusText);
       }
     } else if (error.code === "ECONNABORTED") {
-      console.error(chalk.red("\n❌ Error: Request timed out. The codebase might be too large."));
-      console.error(chalk.yellow("Try using repomix with additional filters to reduce the size:"));
-      console.error(
-        chalk.cyan('  npx --yes repomix --ignore "**/*.log,tmp/,node_modules/" --stdout')
-      );
-      console.error(chalk.gray("Note: Images and binary files are already excluded by default."));
+      if (!quiet) {
+        console.error(chalk.red("\n❌ Error: Request timed out. The codebase might be too large."));
+        console.error(
+          chalk.yellow("Try using repomix with additional filters to reduce the size:")
+        );
+        console.error(
+          chalk.cyan('  npx --yes repomix --ignore "**/*.log,tmp/,node_modules/" --stdout')
+        );
+        console.error(chalk.gray("Note: Images and binary files are already excluded by default."));
+      } else {
+        console.error("Error: Request timed out. The codebase might be too large.");
+      }
     } else {
-      console.error(chalk.red("\n❌ Error:"), error.message);
+      if (!quiet) {
+        console.error(chalk.red("\n❌ Error:"), error.message);
+      } else {
+        console.error("Error:", error.message);
+      }
     }
 
     process.exit(1);
@@ -225,29 +278,42 @@ async function copyToClipboard(text) {
 }
 
 async function main(goal, options) {
-  console.log(chalk.blue("🤖 Codebase Guide\n"));
-  console.log(chalk.cyan("Goal:"), goal);
-  console.log("");
+  const quiet = options.quiet || options.pipe || isInPipe;
+
+  if (!quiet) {
+    console.log(chalk.blue("🤖 Codebase Guide\n"));
+    console.log(chalk.cyan("Goal:"), goal);
+    console.log("");
+  }
 
   try {
     // Step 1: Run repomix to get codebase
     const codebase = await runRepomix(options);
 
     // Step 2: Call Gemini API for analysis
-    const analysis = await callGeminiAPI(codebase, goal);
+    const analysis = await callGeminiAPI(codebase, goal, options);
 
     // Step 3: Display results
-    console.log(chalk.green("\n✨ Analysis Complete!\n"));
-    console.log(chalk.gray("─".repeat(80)));
-    console.log(analysis);
-    console.log(chalk.gray("─".repeat(80)));
+    if (!quiet) {
+      console.log(chalk.green("\n✨ Analysis Complete!\n"));
+      console.log(chalk.gray("─".repeat(80)));
+      console.log(analysis);
+      console.log(chalk.gray("─".repeat(80)));
+    } else {
+      // For piping, just output the analysis
+      console.log(analysis);
+    }
 
     // Step 4: Copy to clipboard if requested
-    if (options.copy) {
+    if (options.copy && !quiet) {
       await copyToClipboard(analysis);
     }
   } catch (error) {
-    console.error(chalk.red("\n❌ Unexpected error:"), error.message);
+    if (!quiet) {
+      console.error(chalk.red("\n❌ Unexpected error:"), error.message);
+    } else {
+      console.error("Unexpected error:", error.message);
+    }
     process.exit(1);
   }
 }
@@ -257,19 +323,40 @@ program
   .name("codebase-guide")
   .description("Analyze your codebase with AI guidance using repomix and Gemini")
   .version("1.0.0")
-  .argument("<goal>", "The goal or objective you want to achieve with your codebase")
+  .argument(
+    "[goal]",
+    "The goal or objective you want to achieve with your codebase (optional, can be piped via stdin)"
+  )
   .option("-c, --copy", "Copy the analysis result to clipboard")
   .option("--model <model>", "Gemini model to use", MODEL_ID)
   .option(
     "--additional-ignore <patterns>",
     "Additional ignore patterns for repomix (comma-separated)"
   )
+  .option("-q, --quiet", "Suppress progress indicators for piping")
+  .option("-p, --pipe", "Force pipe mode (output only the analysis result)")
   .action(async (goal, options) => {
+    // If no goal provided as argument, try to read from stdin
+    if (!goal) {
+      if (process.stdin.isTTY) {
+        // Not piped, show help
+        program.help();
+        return;
+      } else {
+        // Read from stdin
+        goal = await readStdin();
+        if (!goal) {
+          console.error("Error: No goal provided via argument or stdin");
+          process.exit(1);
+        }
+      }
+    }
+
     await main(goal, options);
   });
 
-// Show help if no arguments provided
-if (process.argv.length <= 2) {
+// Show help if no arguments provided and not piped
+if (process.argv.length <= 2 && process.stdin.isTTY) {
   program.help();
 }
 
