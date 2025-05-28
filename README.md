@@ -35,6 +35,13 @@ A powerful CLI tool that combines [Repomix](https://github.com/yamadashy/repomix
    npm install -g .
    ```
 
+   Or use the included install script:
+
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+
    Or if you prefer to install directly from npm (after publishing):
 
    ```bash
@@ -66,6 +73,15 @@ Navigate to your project directory and run:
 codebase-guide "Add user authentication with JWT tokens"
 ```
 
+### Using stdin for goals
+
+You can also pipe the goal via stdin:
+
+```bash
+echo "Add user authentication with JWT tokens" | codebase-guide
+cat my_goal.txt | codebase-guide
+```
+
 ### Files Ignored by Default
 
 To keep the analysis focused on code and reduce processing time, the following file types are automatically ignored:
@@ -84,6 +100,30 @@ The tool also respects your `.gitignore` file and repomix's default ignore patte
 
 ```bash
 codebase-guide "Implement a REST API for blog posts" --copy
+```
+
+### Custom Gemini Model
+
+Specify a different Gemini model (default is `gemini-2.5-pro-preview-05-06`):
+
+```bash
+codebase-guide "Your goal" --model "gemini-1.5-pro"
+```
+
+### Quiet Mode for Scripting
+
+Suppress progress indicators for piping or scripting:
+
+```bash
+codebase-guide "Your goal" --quiet
+```
+
+### Pipe Mode
+
+Force pipe mode to output only the analysis result:
+
+```bash
+codebase-guide "Your goal" --pipe
 ```
 
 ### Additional Ignore Patterns
@@ -172,17 +212,17 @@ Your Express.js application follows a standard MVC architecture with the followi
 
 ## 🛠️ Configuration
 
-### Custom Gemini Model
-
-You can specify a different Gemini model:
-
-```bash
-codebase-guide "Your goal" --model "gemini-1.5-pro"
-```
-
 ### Environment Variables
 
 - `GEMINI_API_KEY`: Your Google Gemini API key (required)
+
+### Command Aliases
+
+You can use either `codebase-guide` or the shorter alias `cg`:
+
+```bash
+cg "Add user authentication with JWT tokens"
+```
 
 ## 🔍 How It Works
 
