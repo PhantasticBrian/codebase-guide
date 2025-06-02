@@ -73,6 +73,17 @@ Navigate to your project directory and run:
 codebase-guide "Add user authentication with JWT tokens"
 ```
 
+### Options
+
+| Option                      | Alias | Description                                                         | Default                          |
+| --------------------------- | ----- | ------------------------------------------------------------------- | -------------------------------- |
+| `--copy`                    | `-c`  | Copy the analysis result to clipboard                              | `false`                          |
+| `--model <model>`           |       | Gemini model to use                                                | `gemini-2.5-pro-preview-05-06`   |
+| `--additional-ignore <patterns>` |  | Additional ignore patterns for repomix (comma-separated)           |                                  |
+| `--quiet`                   | `-q`  | Suppress progress indicators for piping                            | `false`                          |
+| `--pipe`                    | `-p`  | Force pipe mode (output only the analysis result)                  | `false`                          |
+| `--verbose`                 | `-v`  | Enable verbose output, including the Gemini prompt sent to the API | `false`                          |
+
 ### Using stdin for goals
 
 You can also pipe the goal via stdin:
@@ -124,6 +135,16 @@ Force pipe mode to output only the analysis result:
 
 ```bash
 codebase-guide "Your goal" --pipe
+```
+
+### Verbose Mode for Debugging
+
+See the full prompt sent to Gemini:
+
+```bash
+codebase-guide "Your goal" --verbose
+# or
+codebase-guide "Your goal" -v
 ```
 
 ### Additional Ignore Patterns

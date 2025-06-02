@@ -75,8 +75,16 @@ export async function callGeminiAPI(codebase, goal, options = {}) {
     return cachedResult;
   }
 
-  const spinner = quiet ? null : ora("Analyzing codebase with Gemini AI...").start();
   const prompt = getAnalysisPrompt(codebase, goal);
+
+  // Add verbose logging for the prompt
+  if (options.verbose) {
+    console.log(chalk.magentaBright.bold("\n=== BEGIN GEMINI PROMPT ==="));
+    console.log(prompt);
+    console.log(chalk.magentaBright.bold("=== END GEMINI PROMPT ===\n"));
+  }
+
+  const spinner = quiet ? null : ora("Analyzing codebase with Gemini AI...").start();
 
   const requestBody = {
     contents: [

@@ -82,6 +82,7 @@ program
   )
   .option("-q, --quiet", "Suppress progress indicators for piping")
   .option("-p, --pipe", "Force pipe mode (output only the analysis result)")
+  .option("-v, --verbose", "Enable verbose output, including the Gemini prompt")
   .action(async (goal, options) => {
     // If no goal provided as argument, try to read from stdin
     if (!goal) {
